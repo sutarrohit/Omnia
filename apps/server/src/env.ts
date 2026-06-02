@@ -15,7 +15,10 @@ const EnvSchema = z.object({
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]),
   DATABASE_URL: z.url(),
-  DIRECT_URL: z.url()
+  DIRECT_URL: z.url(),
+  TELEGRAM_BOT_TOKEN: z.string().min(1),
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(16), // random string you generate
+  PUBLIC_URL: z.url() // public base URL used to register the webhook
 });
 
 export type env = z.infer<typeof EnvSchema>;

@@ -11,8 +11,9 @@ export default defineConfig({
     }
   },
   resolve: {
+    // Match tsconfig's "@/*" -> repo-root mapping (e.g. "@/src/...", "@/prisma/...").
     alias: {
-      "@": path.resolve(__dirname, "./src")
+      "@": path.resolve(__dirname, ".")
     }
   }
 });
