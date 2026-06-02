@@ -1,12 +1,14 @@
 import type { PrismaClient } from "@/prisma/generated/client.js";
 import type { ChannelRegistry } from "../channels/channel-registry.js";
+import { messageCreated, type RealtimeHub } from "../lib/realtime.js";
 import type { MessageService } from "./message.service.js";
 
 export class ReplyService {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly registry: ChannelRegistry,
-    private readonly messages: MessageService
+    private readonly messages: MessageService,
+    private readonly realtime: RealtimeHub
   ) {}
 
   async reply(conversationId: string, content: string) {
@@ -22,7 +24,9 @@ export class ReplyService {
       const result = await this.registry
         .get(conv.channel)
         .sendMessage(identity.channelUserId, { type: "TEXT", content });
-      return await this.messages.markStatus(stored.id, "SENT", result.channelMessageId);
+      const sent = await this.messages.markStatus(stored.id, "SENT", result.channelMessageId);
+      this.realtime.publish(messageCreated(sent)); // fan out the outbound message too
+      return sent;
     } catch (err) {
       await this.messages.markStatus(stored.id, "FAILED");
       throw err;

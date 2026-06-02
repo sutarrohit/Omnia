@@ -1,4 +1,5 @@
 import type { NormalizedInboundMessage } from "../channels/types.js";
+import { messageCreated, type RealtimeHub } from "../lib/realtime.js";
 import type { ConversationService } from "./conversation.service.js";
 import type { CustomerService } from "./customer.service.js";
 import type { MessageService } from "./message.service.js";
@@ -7,7 +8,8 @@ export class IngestService {
   constructor(
     private readonly customers: CustomerService,
     private readonly conversations: ConversationService,
-    private readonly messages: MessageService
+    private readonly messages: MessageService,
+    private readonly realtime: RealtimeHub
   ) {}
 
   async ingest(msg: NormalizedInboundMessage): Promise<void> {
@@ -25,6 +27,6 @@ export class IngestService {
     if (!stored) return; // duplicate webhook — no-op
 
     await this.conversations.touch(conversation.id, msg.timestamp);
-    // Phase 8: push `stored` to the assigned agent here.
+    this.realtime.publish(messageCreated(stored)); // fan out to live subscribers
   }
 }

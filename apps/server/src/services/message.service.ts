@@ -45,4 +45,23 @@ export class MessageService {
   async markStatus(id: string, status: MessageStatus, channelMessageId?: string) {
     return this.prisma.message.update({ where: { id }, data: { status, channelMessageId } });
   }
+
+  /** The thread for a conversation, oldest first. Excludes the raw provider payload. */
+  listByConversation(conversationId: string) {
+    return this.prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        conversationId: true,
+        direction: true,
+        type: true,
+        content: true,
+        mediaUrl: true,
+        channelMessageId: true,
+        status: true,
+        createdAt: true
+      }
+    });
+  }
 }
