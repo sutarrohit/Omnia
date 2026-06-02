@@ -1,11 +1,11 @@
 import { Platform } from "@/prisma/generated/client.js";
 import { describe, expect, it, vi } from "vitest";
-import type { NormalizedInboundMessage } from "../channels/types.js";
-import { RealtimeHub } from "../lib/realtime.js";
-import type { ConversationService } from "./conversation.service.js";
-import type { CustomerService } from "./customer.service.js";
-import { IngestService } from "./ingest.service.js";
-import type { MessageService } from "./message.service.js";
+import type { NormalizedInboundMessage } from "@/src/channels/types.js";
+import { RealtimeHub } from "@/src/lib/realtime.js";
+import type { ConversationService } from "@/src/services/conversation.service.js";
+import type { CustomerService } from "@/src/services/customer.service.js";
+import { IngestService } from "@/src/services/ingest.service.js";
+import type { MessageService } from "@/src/services/message.service.js";
 
 const msg: NormalizedInboundMessage = {
   channel: Platform.TELEGRAM,

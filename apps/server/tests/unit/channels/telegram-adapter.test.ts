@@ -1,7 +1,7 @@
 import { Platform } from "@/prisma/generated/client.js";
 import { describe, expect, it } from "vitest";
-import { TelegramAdapter } from "./telegram-adapter.js";
-import type { TelegramUpdate } from "./telegram.types.js";
+import { TelegramAdapter } from "@/src/channels/telegram/telegram-adapter.js";
+import type { TelegramUpdate } from "@/src/channels/telegram/telegram.types.js";
 
 const adapter = new TelegramAdapter("test-token", "test-webhook-secret-1234567890");
 
