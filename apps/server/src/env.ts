@@ -16,6 +16,8 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]),
   DATABASE_URL: z.url(),
   DIRECT_URL: z.url(),
+  BETTER_AUTH_SECRET: z.string().min(32), // signing key for sessions/cookies
+  BETTER_AUTH_URL: z.url(), // server's own public base URL (e.g. http://localhost:4000)
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16), // random string you generate
   PUBLIC_URL: z.url() // public base URL used to register the webhook
