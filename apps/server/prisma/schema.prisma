@@ -1,0 +1,97 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+model Customer {
+  id            String            @id @default(uuid())
+  displayName   String?
+  identities    ChannelIdentity[]
+  conversations Conversation[]
+  createdAt     DateTime          @default(now())
+}
+
+model ChannelIdentity {
+  id            String   @id @default(uuid())
+  customer      Customer @relation(fields: [customerId], references: [id])
+  customerId    String
+  channel       Platform
+  channelUserId String // platform-specific user/chat id (as string)
+  createdAt     DateTime @default(now())
+
+  @@unique([channel, channelUserId])
+  @@index([customerId])
+}
+
+model Conversation {
+  id              String             @id @default(uuid())
+  customer        Customer           @relation(fields: [customerId], references: [id])
+  customerId      String
+  channel         Platform
+  status          ConversationStatus @default(OPEN)
+  assignedAgentId String?
+  lastMessageAt   DateTime?
+  messages        Message[]
+  createdAt       DateTime           @default(now())
+
+  @@index([channel, status])
+  @@index([assignedAgentId])
+}
+
+model Message {
+  id               String        @id @default(uuid())
+  conversation     Conversation  @relation(fields: [conversationId], references: [id])
+  conversationId   String
+  direction        Direction
+  type             MessageType   @default(TEXT)
+  content          String?
+  mediaUrl         String?
+  channelMessageId String? // platform id, for dedupe
+  status           MessageStatus @default(PENDING)
+  raw              Json?
+  createdAt        DateTime      @default(now())
+
+  @@unique([conversationId, channelMessageId]) // idempotency guard
+  @@index([conversationId, createdAt])
+}
+
+enum Platform {
+  WEBSITE_PLUGIN
+  TELEGRAM
+  EMAIL
+  DISCORD
+  FACEBOOK
+  INSTAGRAM
+  YOUTUBE
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  VIDEO
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
