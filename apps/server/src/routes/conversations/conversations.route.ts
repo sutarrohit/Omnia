@@ -1,64 +1,27 @@
-import { createRoute, z } from "@hono/zod-openapi";
-
-const DateSchema = z.union([z.string(), z.date()]);
-
-const ConversationListItemSchema = z.object({
-  id: z.string(),
-  customerId: z.string(),
-  channel: z.string(),
-  status: z.string(),
-  assignedAgentId: z.string().nullable(),
-  lastMessageAt: DateSchema.nullable(),
-  createdAt: DateSchema,
-  customer: z.object({ id: z.string(), displayName: z.string().nullable() }),
-  messages: z.array(
-    z.object({
-      id: z.string(),
-      content: z.string().nullable(),
-      direction: z.string(),
-      createdAt: DateSchema
-    })
-  )
-});
-
-const MessageSchema = z.object({
-  id: z.string(),
-  conversationId: z.string(),
-  direction: z.string(),
-  type: z.string(),
-  content: z.string().nullable(),
-  mediaUrl: z.string().nullable(),
-  channelMessageId: z.string().nullable(),
-  status: z.string(),
-  createdAt: DateSchema
-});
+import { createRoute } from "@hono/zod-openapi";
+import { listQuerySchema, listResponseSchema } from "../../types/conversations/list.schema.js";
+import {
+  threadParamsSchema,
+  threadResponseSchema
+} from "../../types/conversations/thread.schema.js";
+import {
+  replyBodySchema,
+  replyParamsSchema,
+  replyResponseSchema
+} from "../../types/conversations/reply.schema.js";
 
 export const listRoute = createRoute({
   method: "get",
   path: "/",
   tags: ["Conversations"],
   request: {
-    query: z.object({
-      status: z.enum(["OPEN", "PENDING", "CLOSED"]).optional(),
-      page: z.coerce.number().int().min(1).default(1),
-      pageSize: z.coerce.number().int().min(1).max(100).default(20)
-    })
+    query: listQuerySchema
   },
   responses: {
     200: {
       description: "Paginated list of conversations, newest activity first",
       content: {
-        "application/json": {
-          schema: z.object({
-            data: z.array(ConversationListItemSchema),
-            pagination: z.object({
-              page: z.number(),
-              pageSize: z.number(),
-              total: z.number(),
-              totalPages: z.number()
-            })
-          })
-        }
+        "application/json": { schema: listResponseSchema }
       }
     }
   }
@@ -69,13 +32,13 @@ export const threadRoute = createRoute({
   path: "/{id}/messages",
   tags: ["Conversations"],
   request: {
-    params: z.object({ id: z.uuid() })
+    params: threadParamsSchema
   },
   responses: {
     200: {
       description: "Messages in the conversation, oldest first",
       content: {
-        "application/json": { schema: z.array(MessageSchema) }
+        "application/json": { schema: threadResponseSchema }
       }
     }
   }
@@ -86,10 +49,10 @@ export const replyRoute = createRoute({
   path: "/{id}/reply",
   tags: ["Conversations"],
   request: {
-    params: z.object({ id: z.uuid() }),
+    params: replyParamsSchema,
     body: {
       content: {
-        "application/json": { schema: z.object({ content: z.string().min(1) }) }
+        "application/json": { schema: replyBodySchema }
       }
     }
   },
@@ -97,9 +60,7 @@ export const replyRoute = createRoute({
     201: {
       description: "Reply sent",
       content: {
-        "application/json": {
-          schema: z.object({ id: z.string(), status: z.string() })
-        }
+        "application/json": { schema: replyResponseSchema }
       }
     }
   }

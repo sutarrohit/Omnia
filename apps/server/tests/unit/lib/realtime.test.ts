@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { messageCreated, RealtimeHub, type RealtimeEvent } from "./realtime.js";
+import { messageCreated, RealtimeHub, type RealtimeEvent } from "@/src/lib/realtime.js";
 
 const sampleRow = {
   id: "m1",

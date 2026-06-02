@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import app from "../../app.js";
+import app from "@/src/app.js";
 
 // The webhook secret matches .env.test (TELEGRAM_WEBHOOK_SECRET).
 const SECRET = "test-webhook-secret-1234567890";
