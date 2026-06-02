@@ -1,6 +1,7 @@
 import createApp from "./lib/create-app.js";
 import { configureOpenAPI } from "./lib/configure-open-api.js";
-import demoRoutes from "./routes/demo/index.js";
+import { webhooksRouter } from "./routes/webhooks/index.js";
+import { conversationsRouter } from "./routes/conversations/index.js";
 
 import type { Context } from "hono";
 import type { AppBinding } from "./lib/types.js";
@@ -14,8 +15,11 @@ app.get("/health", (c: Context<AppBinding>) => {
   });
 });
 
-// Mount feature routes with full paths preserved in types
-const routes = app.route("/api/v1", demoRoutes);
+// External webhook endpoints live at the root (unversioned), like /health.
+app.route("/webhooks", webhooksRouter);
 
-export type AppType = typeof routes;
-export default routes;
+// Versioned feature routes.
+app.route("/api/v1/conversations", conversationsRouter);
+
+export type AppType = typeof app;
+export default app;
