@@ -1,6 +1,6 @@
 import { Platform } from "@/prisma/generated/client.js";
 import { describe, expect, it, vi } from "vitest";
-import type { NormalizedInboundMessage } from "@/src/channels/types.js";
+import type { ConnectionContext, NormalizedInboundMessage } from "@/src/channels/types.js";
 import { RealtimeHub } from "@/src/lib/realtime.js";
 import type { ConversationService } from "@/src/services/conversation.service.js";
 import type { CustomerService } from "@/src/services/customer.service.js";
@@ -16,6 +16,15 @@ const msg: NormalizedInboundMessage = {
   senderName: "Ada",
   timestamp: new Date(1_700_000_000 * 1000),
   raw: {}
+};
+
+const ctx: ConnectionContext = {
+  id: "conn-1",
+  organizationId: "org-1",
+  platform: Platform.TELEGRAM,
+  externalId: "bot-1",
+  token: "secret-token",
+  webhookSecret: "hook-secret"
 };
 
 /** A stored-message stand-in with the fields the realtime mapper reads. */
@@ -57,7 +66,7 @@ describe("IngestService.ingest", () => {
   it("stores a new message, touches the conversation, and publishes a realtime event", async () => {
     const { ingest, conversations, messages, published } = makeServices([storedRow("msg-1")]);
 
-    await ingest.ingest(msg);
+    await ingest.ingest(msg, ctx);
 
     expect(messages.storeInbound).toHaveBeenCalledTimes(1);
     expect(conversations.touch).toHaveBeenCalledTimes(1);
@@ -70,8 +79,8 @@ describe("IngestService.ingest", () => {
     // First call stores; second hits the unique guard -> storeInbound returns null.
     const { ingest, conversations, messages, published } = makeServices([storedRow("msg-1"), null]);
 
-    await ingest.ingest(msg);
-    await ingest.ingest(msg);
+    await ingest.ingest(msg, ctx);
+    await ingest.ingest(msg, ctx);
 
     expect(messages.storeInbound).toHaveBeenCalledTimes(2);
     // touch + publish only ran for the first (non-duplicate) ingest.

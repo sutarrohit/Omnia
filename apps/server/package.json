@@ -10,7 +10,6 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:reset": "tsx prisma/seed.ts --reset",
-    "webhook:telegram": "tsx scripts/set-telegram-webhook.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
