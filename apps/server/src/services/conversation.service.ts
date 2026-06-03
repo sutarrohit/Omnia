@@ -56,6 +56,11 @@ export class ConversationService {
     );
   }
 
+  /** A conversation by id, but only if it belongs to the given org (else null). */
+  findOwned(organizationId: string, id: string) {
+    return this.prisma.conversation.findFirst({ where: { id, organizationId } });
+  }
+
   async touch(id: string, at: Date) {
     await this.prisma.conversation.update({ where: { id }, data: { lastMessageAt: at } });
   }

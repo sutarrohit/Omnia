@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/prisma/generated/client.js";
+import { ApiError } from "../lib/api-error.js";
 import { messageCreated, type RealtimeHub } from "../lib/realtime.js";
 import type { ConnectionService } from "./connection.service.js";
 import type { MessageService } from "./message.service.js";
@@ -11,11 +12,15 @@ export class ReplyService {
     private readonly realtime: RealtimeHub
   ) {}
 
-  async reply(conversationId: string, content: string) {
+  async reply(organizationId: string, conversationId: string, content: string) {
     const conv = await this.prisma.conversation.findUniqueOrThrow({
       where: { id: conversationId },
       include: { connection: true, customer: { include: { identities: true } } }
     });
+    // Can't reply into another org's conversation.
+    if (conv.organizationId !== organizationId) {
+      throw new ApiError(404, "NOT_FOUND", "Conversation not found");
+    }
     const identity = conv.customer.identities.find((i) => i.connectionId === conv.connectionId);
     if (!identity) throw new Error("no channel identity for this conversation");
 
