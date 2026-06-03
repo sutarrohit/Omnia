@@ -11,6 +11,7 @@ export interface RealtimeMessage {
 
 export interface MessageCreatedEvent {
   type: "message.created";
+  organizationId: string; // tenant scope — subscribers filter on this
   conversationId: string;
   message: RealtimeMessage;
 }
@@ -43,18 +44,22 @@ export class RealtimeHub {
   }
 }
 
-/** Build a `message.created` event from a stored message row. */
-export function messageCreated(m: {
-  id: string;
-  conversationId: string;
-  direction: string;
-  type: string;
-  content: string | null;
-  status: string;
-  createdAt: Date;
-}): MessageCreatedEvent {
+/** Build a `message.created` event from a stored message row, scoped to an org. */
+export function messageCreated(
+  m: {
+    id: string;
+    conversationId: string;
+    direction: string;
+    type: string;
+    content: string | null;
+    status: string;
+    createdAt: Date;
+  },
+  organizationId: string
+): MessageCreatedEvent {
   return {
     type: "message.created",
+    organizationId,
     conversationId: m.conversationId,
     message: {
       id: m.id,

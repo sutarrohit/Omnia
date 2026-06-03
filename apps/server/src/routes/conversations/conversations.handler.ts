@@ -51,12 +51,14 @@ export const replyHandler: AppRouteHandler<typeof replyRoute> = async (c) => {
  */
 export const streamHandler = (c: Context<AppBinding>) => {
   const conversationId = c.req.query("conversationId");
+  const organizationId = c.var.organizationId;
 
   return streamSSE(c, async (stream) => {
     const queue: RealtimeEvent[] = [];
     let notify: (() => void) | null = null;
 
     const unsubscribe = realtimeHub.subscribe((event) => {
+      if (event.organizationId !== organizationId) return; // tenant isolation
       if (conversationId && event.conversationId !== conversationId) return;
       queue.push(event);
       notify?.();

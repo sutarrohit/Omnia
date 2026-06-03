@@ -30,7 +30,7 @@ export class ReplyService {
       const adapter = this.connections.adapter(conv.connection);
       const result = await adapter.sendMessage(identity.channelUserId, { type: "TEXT", content });
       const sent = await this.messages.markStatus(stored.id, "SENT", result.channelMessageId);
-      this.realtime.publish(messageCreated(sent)); // fan out the outbound message too
+      this.realtime.publish(messageCreated(sent, conv.organizationId)); // fan out the outbound message too
       return sent;
     } catch (err) {
       await this.messages.markStatus(stored.id, "FAILED");

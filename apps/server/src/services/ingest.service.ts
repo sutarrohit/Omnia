@@ -39,6 +39,6 @@ export class IngestService {
     if (!stored) return; // duplicate webhook — no-op
 
     await this.conversations.touch(conversation.id, msg.timestamp);
-    this.realtime.publish(messageCreated(stored)); // fan out to live subscribers
+    this.realtime.publish(messageCreated(stored, ctx.organizationId)); // fan out to live subscribers
   }
 }

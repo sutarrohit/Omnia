@@ -19,11 +19,15 @@ describe("RealtimeHub", () => {
     hub.subscribe((e) => a.push(e));
     hub.subscribe((e) => b.push(e));
 
-    hub.publish(messageCreated(sampleRow));
+    hub.publish(messageCreated(sampleRow, "org-1"));
 
     expect(a).toHaveLength(1);
     expect(b).toHaveLength(1);
-    expect(a[0]).toMatchObject({ type: "message.created", conversationId: "c1" });
+    expect(a[0]).toMatchObject({
+      type: "message.created",
+      conversationId: "c1",
+      organizationId: "org-1"
+    });
   });
 
   it("stops delivering after unsubscribe and tracks size", () => {
@@ -34,14 +38,14 @@ describe("RealtimeHub", () => {
 
     unsubscribe();
     expect(hub.size).toBe(0);
-    hub.publish(messageCreated(sampleRow));
+    hub.publish(messageCreated(sampleRow, "org-1"));
     expect(received).toHaveLength(0);
   });
 });
 
 describe("messageCreated", () => {
   it("serializes createdAt to an ISO string", () => {
-    const event = messageCreated(sampleRow);
+    const event = messageCreated(sampleRow, "org-1");
     expect(event.message.createdAt).toBe(sampleRow.createdAt.toISOString());
     expect(event.message.content).toBe("hi");
   });
