@@ -1,11 +1,10 @@
-import env from "../env.js";
-import { ChannelRegistry } from "./channel-registry.js";
-import { TelegramAdapter } from "./telegram/telegram-adapter.js";
+import { ProviderRegistry } from "./provider-registry.js";
+import { TelegramProvider } from "./telegram/telegram-provider.js";
 
-/** Build the registry with every channel adapter registered. */
-export function buildChannelRegistry(): ChannelRegistry {
-  const registry = new ChannelRegistry();
-  registry.register(new TelegramAdapter(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_WEBHOOK_SECRET));
-  // registry.register(new WhatsAppAdapter(...));  // later
+/** Build the registry with every channel provider registered (once per platform). */
+export function buildProviderRegistry(): ProviderRegistry {
+  const registry = new ProviderRegistry();
+  registry.register(new TelegramProvider());
+  // registry.register(new WhatsAppProvider());  // <- the entire cost of a new channel
   return registry;
 }

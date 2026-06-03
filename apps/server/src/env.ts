@@ -16,9 +16,13 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]),
   DATABASE_URL: z.url(),
   DIRECT_URL: z.url(),
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
-  TELEGRAM_WEBHOOK_SECRET: z.string().min(16), // random string you generate
-  PUBLIC_URL: z.url() // public base URL used to register the webhook
+  BETTER_AUTH_SECRET: z.string().min(32), // signing key for sessions/cookies
+  BETTER_AUTH_URL: z.url(), // server's own public base URL (e.g. http://localhost:4000)
+  // 32-byte key (base64) for AES-256-GCM encryption of stored bot tokens.
+  APP_ENCRYPTION_KEY: z
+    .string()
+    .refine((v) => Buffer.from(v, "base64").length === 32, "must be 32 bytes (base64)"),
+  PUBLIC_URL: z.url() // public base URL used to register per-bot webhooks
 });
 
 export type env = z.infer<typeof EnvSchema>;

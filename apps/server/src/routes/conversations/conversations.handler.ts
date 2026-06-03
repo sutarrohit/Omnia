@@ -7,12 +7,18 @@ import {
   replyService
 } from "../../lib/container.js";
 import type { RealtimeEvent } from "../../lib/realtime.js";
+import { ApiError } from "../../lib/api-error.js";
 import type { AppBinding, AppRouteHandler } from "../../lib/types.js";
 import type { listRoute, replyRoute, threadRoute } from "./conversations.route.js";
 
 export const listHandler: AppRouteHandler<typeof listRoute> = async (c) => {
   const { status, page, pageSize } = c.req.valid("query");
-  const { data, total } = await conversationService.list({ status, page, pageSize });
+  const { data, total } = await conversationService.list({
+    organizationId: c.var.organizationId,
+    status,
+    page,
+    pageSize
+  });
   return c.json(
     {
       data,
@@ -24,6 +30,10 @@ export const listHandler: AppRouteHandler<typeof listRoute> = async (c) => {
 
 export const threadHandler: AppRouteHandler<typeof threadRoute> = async (c) => {
   const { id } = c.req.valid("param");
+  // Don't leak another org's messages.
+  const owned = await conversationService.findOwned(c.var.organizationId, id);
+  if (!owned) throw new ApiError(404, "NOT_FOUND", "Conversation not found");
+
   const messages = await messageService.listByConversation(id);
   return c.json(messages, 200);
 };
@@ -31,7 +41,7 @@ export const threadHandler: AppRouteHandler<typeof threadRoute> = async (c) => {
 export const replyHandler: AppRouteHandler<typeof replyRoute> = async (c) => {
   const { id } = c.req.valid("param");
   const { content } = c.req.valid("json");
-  const msg = await replyService.reply(id, content);
+  const msg = await replyService.reply(c.var.organizationId, id, content);
   return c.json({ id: msg.id, status: msg.status }, 201);
 };
 
@@ -41,12 +51,14 @@ export const replyHandler: AppRouteHandler<typeof replyRoute> = async (c) => {
  */
 export const streamHandler = (c: Context<AppBinding>) => {
   const conversationId = c.req.query("conversationId");
+  const organizationId = c.var.organizationId;
 
   return streamSSE(c, async (stream) => {
     const queue: RealtimeEvent[] = [];
     let notify: (() => void) | null = null;
 
     const unsubscribe = realtimeHub.subscribe((event) => {
+      if (event.organizationId !== organizationId) return; // tenant isolation
       if (conversationId && event.conversationId !== conversationId) return;
       queue.push(event);
       notify?.();

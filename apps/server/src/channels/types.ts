@@ -1,6 +1,21 @@
 import type { Platform } from "@/prisma/generated/client.js";
 
 /**
+ * A single bot connection, decrypted and ready to use. Built from a
+ * `ChannelConnection` row by `ConnectionService.toContext`. The `token` is the
+ * decrypted credential and lives in memory only — never persist or log it.
+ */
+export interface ConnectionContext {
+  id: string; // ChannelConnection.id
+  organizationId: string;
+  platform: Platform;
+  externalId: string;
+  token: string; // DECRYPTED — in-memory only
+  webhookSecret: string;
+  meta?: unknown;
+}
+
+/**
  * Channel-agnostic shape of an inbound message. Every adapter's `parseInbound`
  * turns a provider-specific payload into zero or more of these — services only
  * ever see this normalized form.

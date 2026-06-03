@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { auth } from "@/src/auth.js";
 import app from "@/src/app.js";
+
+const authed = { user: { id: "user-1" }, session: { activeOrganizationId: "org-1" } };
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+  // Conversation routes require auth — pretend we're signed in with an active org.
+  vi.spyOn(auth.api, "getSession").mockResolvedValue(authed as never);
+});
 
 function postReply(id: string, body: unknown) {
   return app.request(`/api/v1/conversations/${id}/reply`, {
@@ -17,6 +26,14 @@ describe("conversations OpenAPI document", () => {
     expect(doc.paths["/api/v1/conversations"]).toBeDefined();
     expect(doc.paths["/api/v1/conversations/{id}/messages"]).toBeDefined();
     expect(doc.paths["/api/v1/conversations/{id}/reply"]).toBeDefined();
+  });
+});
+
+describe("auth", () => {
+  it("401s the inbox when there is no session", async () => {
+    vi.spyOn(auth.api, "getSession").mockResolvedValue(null as never);
+    const res = await app.request("/api/v1/conversations");
+    expect(res.status).toBe(401);
   });
 });
 

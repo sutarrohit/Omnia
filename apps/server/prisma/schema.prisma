@@ -8,29 +8,39 @@ generator client {
 }
 
 model Customer {
-  id            String            @id @default(uuid())
-  displayName   String?
-  identities    ChannelIdentity[]
-  conversations Conversation[]
-  createdAt     DateTime          @default(now())
+  id             String            @id @default(uuid())
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  organizationId String
+  displayName    String?
+  identities     ChannelIdentity[]
+  conversations  Conversation[]
+  createdAt      DateTime          @default(now())
+
+  @@index([organizationId])
 }
 
 model ChannelIdentity {
-  id            String   @id @default(uuid())
-  customer      Customer @relation(fields: [customerId], references: [id])
+  id            String            @id @default(uuid())
+  customer      Customer          @relation(fields: [customerId], references: [id])
   customerId    String
-  channel       Platform
+  connection    ChannelConnection @relation(fields: [connectionId], references: [id])
+  connectionId  String
+  channel       Platform // denormalized for convenience
   channelUserId String // platform-specific user/chat id (as string)
-  createdAt     DateTime @default(now())
+  createdAt     DateTime          @default(now())
 
-  @@unique([channel, channelUserId])
+  @@unique([connectionId, channelUserId]) // per-bot identity (was [channel, channelUserId])
   @@index([customerId])
 }
 
 model Conversation {
   id              String             @id @default(uuid())
+  organization    Organization       @relation(fields: [organizationId], references: [id])
+  organizationId  String
   customer        Customer           @relation(fields: [customerId], references: [id])
   customerId      String
+  connection      ChannelConnection  @relation(fields: [connectionId], references: [id])
+  connectionId    String
   channel         Platform
   status          ConversationStatus @default(OPEN)
   assignedAgentId String?
@@ -38,7 +48,8 @@ model Conversation {
   messages        Message[]
   createdAt       DateTime           @default(now())
 
-  @@index([channel, status])
+  @@index([connectionId, status])
+  @@index([organizationId, status])
   @@index([assignedAgentId])
 }
 
@@ -55,8 +66,29 @@ model Message {
   raw              Json?
   createdAt        DateTime      @default(now())
 
-  @@unique([conversationId, channelMessageId]) // idempotency guard
+  // idempotency guard
+  @@unique([conversationId, channelMessageId])
   @@index([conversationId, createdAt])
+}
+
+model ChannelConnection {
+  id             String            @id @default(uuid())
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  organizationId String
+  platform       Platform
+  externalId     String // bot's own id from the provider (e.g. Telegram numeric id)
+  displayName    String? // bot username / title, for the UI
+  encryptedToken String // AES-256-GCM packed (iv:tag:ciphertext, base64)
+  webhookSecret  String // per-connection random secret
+  status         ConnectionStatus  @default(ACTIVE)
+  meta           Json? // platform-specific extras (plug-and-play room)
+  identities     ChannelIdentity[]
+  conversations  Conversation[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([platform, externalId]) // same bot can't be added twice
+  @@index([organizationId])
 }
 
 enum Platform {
@@ -94,4 +126,124 @@ enum MessageStatus {
   DELIVERED
   READ
   FAILED
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  DISABLED
+  ERROR
+}
+
+model User {
+  id            String       @id @default(uuid())
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id @default(uuid())
+  expiresAt            DateTime
+  token                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Organization {
+  id            String              @id @default(uuid())
+  name          String
+  slug          String
+  logo          String?
+  createdAt     DateTime
+  metadata      String?
+  members       Member[]
+  invitations   Invitation[]
+  connections   ChannelConnection[]
+  customers     Customer[]
+  conversations Conversation[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
 }

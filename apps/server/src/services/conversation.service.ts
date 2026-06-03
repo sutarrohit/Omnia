@@ -3,10 +3,24 @@ import type { ConversationStatus, Platform, PrismaClient } from "@/prisma/genera
 export class ConversationService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  /** Inbox list: conversations (optionally filtered by status), newest activity first. */
-  async list(params: { status?: ConversationStatus; page: number; pageSize: number }) {
-    const { status, page, pageSize } = params;
-    const where = status ? { status } : {};
+  /**
+   * Inbox list, newest activity first. Filter by org and/or bot connection and/or
+   * status. (org/connection are optional until the auth middleware always supplies
+   * the org — see Phase 8.)
+   */
+  async list(params: {
+    organizationId?: string;
+    connectionId?: string;
+    status?: ConversationStatus;
+    page: number;
+    pageSize: number;
+  }) {
+    const { organizationId, connectionId, status, page, pageSize } = params;
+    const where = {
+      ...(organizationId ? { organizationId } : {}),
+      ...(connectionId ? { connectionId } : {}),
+      ...(status ? { status } : {})
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.conversation.findMany({
@@ -25,16 +39,26 @@ export class ConversationService {
     return { data, total };
   }
 
-  /** Return the customer's open conversation on this channel, or open a new one. */
-  async findOrCreateOpen(customerId: string, channel: Platform) {
+  /** Return the customer's open conversation on this bot, or open a new one. */
+  async findOrCreateOpen(
+    organizationId: string,
+    customerId: string,
+    connectionId: string,
+    channel: Platform
+  ) {
     return (
       (await this.prisma.conversation.findFirst({
-        where: { customerId, channel, status: "OPEN" }
+        where: { customerId, connectionId, status: "OPEN" }
       })) ??
       (await this.prisma.conversation.create({
-        data: { customerId, channel, status: "OPEN" }
+        data: { organizationId, customerId, connectionId, channel, status: "OPEN" }
       }))
     );
+  }
+
+  /** A conversation by id, but only if it belongs to the given org (else null). */
+  findOwned(organizationId: string, id: string) {
+    return this.prisma.conversation.findFirst({ where: { id, organizationId } });
   }
 
   async touch(id: string, at: Date) {
